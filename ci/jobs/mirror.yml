@@ -1,44 +1,44 @@
 resources:
-  - name: dwpdigital-dataworks-repo-template-docker
+  - name: dwpdigital-dataworks-ingress_sft-agent
     type: registry-image-resource
     source:
-      repository: dwpdigital/dataworks-repo-template-docker
+      repository: dwpdigital/dataworks-ingress_sft-agent
     check_every: 5m
 
-  - name: ecr-dwpdigital-dataworks-repo-template-docker-dev
+  - name: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-repo-template-docker"
+      repository: "dataworks-ingress_sft-agent"
 
-  - name: ecr-dwpdigital-dataworks-repo-template-docker
+  - name: ecr-dwpdigital-dataworks-ingress_sft-agent
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-repo-template-docker"
+      repository: "dataworks-ingress_sft-agent"
       aws_role_arn: arn:aws:iam::((dataworks.aws_management_acc)):role/ci
 
 jobs:
-  - name: mirror-dwpdigital-dataworks-repo-template-docker-dev
-    serial_groups: [dataworks-repo-template-docker]
+  - name: mirror-dwpdigital-dataworks-ingress_sft-agent-dev
+    serial_groups: [dataworks-ingress_sft-agent]
     plan:
-      - get: dwpdigital-dataworks-repo-template-docker
+      - get: dwpdigital-dataworks-ingress_sft-agent
         trigger: true
         params:
           format: oci
         attempts: 3
-      - put: ecr-dwpdigital-dataworks-repo-template-docker-dev
+      - put: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
         params:
-          image: "dwpdigital-dataworks-repo-template-docker/image.tar"
+          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
         attempts: 3
 
-  - name: mirror-dwpdigital-dataworks-repo-template-docker
-    serial_groups: [dataworks-repo-template-docker]
+  - name: mirror-dwpdigital-dataworks-ingress_sft-agent
+    serial_groups: [dataworks-ingress_sft-agent]
     plan:
-      - get: dwpdigital-dataworks-repo-template-docker
+      - get: dwpdigital-dataworks-ingress_sft-agent
         trigger: true
         params:
           format: oci
         attempts: 3
-      - put: ecr-dwpdigital-dataworks-repo-template-docker
+      - put: ecr-dwpdigital-dataworks-ingress_sft-agent
         params:
-          image: "dwpdigital-dataworks-repo-template-docker/image.tar"
+          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
         attempts: 3
