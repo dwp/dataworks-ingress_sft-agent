@@ -24,4 +24,4 @@ KMS_KEY_ARN: the encryption key of the bucket
 
 ### Trend micro test
 
-When CREATE_TEST_FILES variable is set to true, a test virus file is created to verify that the agent is active.
+When ```CREATE_TEST_FILES``` variable is set to true, a test virus file is created to verify that the agent is active.
