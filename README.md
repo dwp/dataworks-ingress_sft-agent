@@ -15,7 +15,7 @@ DataWorks ingress sft agent image mounts the stage bucket as a volume to the con
 This requires three run time variables
 ```
 STAGE_BUCKET: bucket id
-MNT_POINT: a directory on the container where the bucket will be mounted
+MNT_POINT: a directory where the bucket will be mounted
 KMS_KEY_ARN: the encryption key of the bucket
 
 ```
