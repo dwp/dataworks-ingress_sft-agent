@@ -8,12 +8,12 @@ resources:
   - name: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-ingress_sft-agent"
+      repository: "dataworks-ingress-sft-agent"
 
   - name: ecr-dwpdigital-dataworks-ingress_sft-agent
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-ingress_sft-agent"
+      repository: "dataworks-ingress-sft-agent"
       aws_role_arn: arn:aws:iam::((dataworks.aws_management_acc)):role/ci
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
         attempts: 3
       - put: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
         params:
-          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
+          image: "dwpdigital-dataworks-ingress-sft-agent/image.tar"
         attempts: 3
 
   - name: mirror-dwpdigital-dataworks-ingress_sft-agent
@@ -40,5 +40,5 @@ jobs:
         attempts: 3
       - put: ecr-dwpdigital-dataworks-ingress_sft-agent
         params:
-          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
+          image: "dwpdigital-dataworks-ingress-sft-agent/image.tar"
         attempts: 3
