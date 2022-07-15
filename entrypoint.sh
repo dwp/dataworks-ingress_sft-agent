@@ -87,12 +87,7 @@ if [ -n "${CREATE_TEST_FILES}" ] && [ -n "${TEST_DIRECTORY}" ]; then
       mkdir "${TEST_DIRECTORY}"
       cd "${TEST_DIRECTORY}"
   fi
-  echo "pass" >> /mnt/stage_point/pass.txt
-  echo "test 1" >> test1.txt
-  echo "test 2" >> test2.txt
-  echo "X5O!P%@AP[4\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*" >> /mnt/stage_point/shouldbecleaned.txt
-  mv /mnt/stage_point/shouldbecleaned.txt /mnt/point/shouldbecleaned.txt || mv /mnt/stage_point/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Could not move eicar file due to test virus remediation action. Test successfull"
-  fi
+fi
 
 echo sleeping
 sleep 14400
