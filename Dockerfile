@@ -5,7 +5,7 @@ ENV acm_cert_helper_version="0.37.0"
 ARG jmx_exporter_version="0.15.0"
 
 
-RUN apt-get update && apt-get install -y ca-certificates util-linux curl g++ gcc musl-dev libffi-dev gcc cargo apt-utils python-pip git automake autotools-dev fuse libcurl4-gnutls-dev libfuse-dev libssl-dev libxml2-dev make pkg-config awscli uuid-runtime devscripts dselect aptitude s3fs
+RUN apt-get update && apt-get install -y ca-certificates util-linux curl g++ jq gcc musl-dev libffi-dev gcc cargo apt-utils python-pip git automake autotools-dev fuse libcurl4-gnutls-dev libfuse-dev libssl-dev libxml2-dev make pkg-config awscli uuid-runtime devscripts dselect aptitude s3fs
 RUN pip install https://github.com/dwp/acm-pca-cert-generator/releases/download/${acm_cert_helper_version}/acm_cert_helper-${acm_cert_helper_version}.tar.gz
 RUN git config --global http.sslVerify false
 RUN git clone --depth 1 --branch ${S3FS_VERSION} https://github.com/s3fs-fuse/s3fs-fuse.git

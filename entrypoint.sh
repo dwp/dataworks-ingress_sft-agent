@@ -2,8 +2,6 @@
 
 set -e
 
-
-
 fusermount -u ${MNT_POINT}
 
 nohup /opt/s3fs-fuse/bin/s3fs ${STAGE_BUCKET} ${MNT_POINT} \
@@ -20,6 +18,13 @@ ls ${MNT_POINT}
 export HTTP_PROXY="http://${proxy_host}:${proxy_port}}"
 export HTTPS_PROXY="$HTTP_PROXY"
 export NO_PROXY="${non_proxied_endpoints},${dks_fqdn}"
+
+echo "attaching secondary network interface"
+
+CONTAINER_ARN=$(cat ${ECS_CONTAINER_METADATA_FILE} | jq -r '.ContainerInstanceARN')
+CONTAINER_DESCRIPTION=$(aws ecs describe-container-instances --container-instances ${CONTAINER_ARN} --cluster data-ingress --region ${AWS_DEFAULT_REGION})
+EC2_INSTANCE_ID=$(echo ${CONTAINER_DESCRIPTION} | jq -r '.containerInstances[0].ec2InstanceId')
+aws ec2 attach-network-interface --region ${AWS_DEFAULT_REGION} --instance-id $EC2_INSTANCE_ID --network-interface-id ${ni_id} --device-index 2
 
 
 echo "INFO: Checking container configuration..."
@@ -87,15 +92,20 @@ if [ -n "${CREATE_TEST_FILES}" ] && [ -n "${TEST_DIRECTORY}" ]; then
       mkdir "${TEST_DIRECTORY}"
       cd "${TEST_DIRECTORY}"
   fi
-  echo "pass" >> /mnt/stage_point/pass.txt
   echo "test 1" >> test1.txt
   echo "test 2" >> test2.txt
-  echo "X5O!P%@AP[4\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*" >> /mnt/stage_point/shouldbecleaned.txt
-  mv /mnt/stage_point/shouldbecleaned.txt /mnt/point/shouldbecleaned.txt || mv /mnt/stage_point/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Could not move eicar file due to test virus remediation action. Test successfull"
   fi
 
+
+
+if [ "${TEST_TREND_MICRO}" = true ] ; then
+  echo "pass" >> /mnt/stage_point/pass.txt
+  mv /mnt/stage_point/shouldbecleaned.txt /mnt/point/shouldbecleaned.txt || mv /mnt/stage_point/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Could not move eicar file due to test virus remediation action. Test successfull"
+fi
+
+
 echo sleeping
-sleep 14400
+sleep 1440
 
 
 # Retrieve certificates
@@ -131,6 +141,12 @@ cd $app_dir
 unset HTTP_PROXY
 unset HTTPS_PROXY
 unset NO_PROXY
+
+if [ -n "${RENAME_FILE}" ]; then
+  today=$(date +'%Y/%m/%d')
+  FILENAME=${FILENAME_PREFIX}-$today
+  sed -i "s/^\(\s*rename_replacement\s*:\s*\).*/\1$FILENAME/" agent-application-config.yml
+fi
 
 if [ -n "${CONFIGURE_SSL}" ]; then
   # Add SSl config to SFT
