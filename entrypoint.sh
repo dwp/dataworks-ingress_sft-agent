@@ -2,120 +2,67 @@
 
 set -e
 
-fusermount -u ${MNT_POINT}
-
-nohup /opt/s3fs-fuse/bin/s3fs ${STAGE_BUCKET} ${MNT_POINT} \
-    -o ecs \
-    -o endpoint=eu-west-2 \
-    -o url=https://s3.amazonaws.com \
-    -o use_sse=kmsid:${KMS_KEY_ARN} \
-    -o nonempty \
-    -o allow_other
-
-echo listing mount pont version six
-ls ${MNT_POINT}
-
-export HTTP_PROXY="http://${proxy_host}:${proxy_port}}"
+export HTTP_PROXY="http://${internet_proxy}:3128"
 export HTTPS_PROXY="$HTTP_PROXY"
 export NO_PROXY="${non_proxied_endpoints},${dks_fqdn}"
 
-echo "attaching secondary network interface"
+if [ "${TYPE}" = receiver ] ; then
 
-CONTAINER_ARN=$(cat ${ECS_CONTAINER_METADATA_FILE} | jq -r '.ContainerInstanceARN')
-CONTAINER_DESCRIPTION=$(aws ecs describe-container-instances --container-instances ${CONTAINER_ARN} --cluster data-ingress --region ${AWS_DEFAULT_REGION})
-EC2_INSTANCE_ID=$(echo ${CONTAINER_DESCRIPTION} | jq -r '.containerInstances[0].ec2InstanceId')
-aws ec2 attach-network-interface --region ${AWS_DEFAULT_REGION} --instance-id $EC2_INSTANCE_ID --network-interface-id ${ni_id} --device-index 2
+  if [ -z "${SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET}" -o -z "${SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX}" ]; then
+    echo "container failed due to missing required env vars SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET, SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX"
+    exit 1
+  fi
 
+  CONTAINER_ARN=$(cat "${ECS_CONTAINER_METADATA_FILE}" | jq -r '.ContainerInstanceARN')
+  CONTAINER_DESCRIPTION=$(aws ecs describe-container-instances --container-instances "${CONTAINER_ARN}" --cluster data-ingress --region "${AWS_DEFAULT_REGION}")
+  EC2_INSTANCE_ID=$(echo "${CONTAINER_DESCRIPTION}" | jq -r '.containerInstances[0].ec2InstanceId')
+  nis=$(aws ec2 describe-network-interfaces --filters Name="attachment.instance-id",Values="${EC2_INSTANCE_ID}" | jq -r .NetworkInterfaces)
+  ni_tag=di-ni-${TYPE}
+  ni_tags=$(echo $nis | jq -r '.[].TagSet[].Value')
+  ni_tags="$ni_tags"nonempty
 
-echo "INFO: Checking container configuration..."
-if [ -z "${INGRESS_SFT_AGENT_CONFIG_S3_BUCKET}" -o -z "${INGRESS_SFT_AGENT_CONFIG_S3_PREFIX}" ]; then
-  echo "ERROR: INGRESS_SFT_AGENT_CONFIG_S3_BUCKET and INGRESS_SFT_AGENT_CONFIG_S3_PREFIX environment variables must be provided"
+  echo "looking for network interface $ni_tag"
+
+  if [ -z "${ni_tags##*$ni_tag*}" ]; then
+    echo "network interface already attached"
+  else
+    echo "network interface $ni_tag not present "
+    echo "attaching $ni_tag as the third network interface"
+    aws ec2 attach-network-interface --region "${AWS_DEFAULT_REGION}" --instance-id "${EC2_INSTANCE_ID}" --network-interface-id "${NI_ID}" --device-index 3
+  fi
+
+  S3_URI="s3://${SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET}/${SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX}"
+
+elif [ "${TYPE}" = sender ] ; then
+  s=120
+  echo "waiting $s seconds to allow receiver agent to start"
+  sleep $s
+  if [ -z "${SFT_AGENT_SENDER_CONFIG_S3_BUCKET}" -o -z "${SFT_AGENT_SENDER_CONFIG_S3_PREFIX}" ]; then
+    echo "container failed due to missing required env vars SFT_AGENT_SENDER_CONFIG_S3_BUCKET, SFT_AGENT_SENDER_CONFIG_S3_PREFIX"
+    exit 1
+  fi
+  S3_URI="s3://${SFT_AGENT_SENDER_CONFIG_S3_BUCKET}/${SFT_AGENT_SENDER_CONFIG_S3_PREFIX}"
+
+else
+  echo "container failed due to TYPE must be either sender or receiver but ${TYPE} was provided"
   exit 1
 fi
 
-S3_URI="s3://${INGRESS_SFT_AGENT_CONFIG_S3_BUCKET}/${INGRESS_SFT_AGENT_CONFIG_S3_PREFIX}"
-
-# If either of the AWS credentials variables were provided, validate them
-if [ -n "${AWS_ACCESS_KEY_ID}${AWS_SECRET_ACCESS_KEY}" ]; then
-  if [ -z "${AWS_ACCESS_KEY_ID}" -o -z "${AWS_SECRET_ACCESS_KEY}" ]; then
-    echo "ERROR: You must provide both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY variables if you want to use access key based authentication"
-    exit 1
-  else
-    echo "INFO: Using supplied access key for authentication"
-  fi
-
-  # If either of the ASSUMEROLE variables were provided, validate them and configure a shared credentials fie
-  if [ -n "${AWS_ASSUMEROLE_ACCOUNT}${AWS_ASSUMEROLE_ROLE}" ]; then
-    if [ -z "${AWS_ASSUMEROLE_ACCOUNT}" -o -z "${AWS_ASSUMEROLE_ROLE}" ]; then
-      echo "ERROR: You must provide both the AWS_ASSUMEROLE_ACCOUNT and AWS_ASSUMEROLE_ROLE variables if you want to assume role"
-      exit 1
-    else
-      ASSUME_ROLE="arn:aws:iam::${AWS_ASSUMEROLE_ACCOUNT}:role/${AWS_ASSUMEROLE_ROLE}"
-      echo "INFO: Configuring AWS credentials for assuming role to ${ASSUME_ROLE}..."
-      mkdir ~/.aws
-      cat > ~/.aws/credentials << EOF
-[default]
-aws_access_key_id=${AWS_ACCESS_KEY_ID}
-aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
-
-[${AWS_ASSUMEROLE_ROLE}]
-role_arn=${ASSUME_ROLE}
-source_profile=default
-EOF
-      PROFILE_OPTION="--profile ${AWS_ASSUMEROLE_ROLE}"
-    fi
-  fi
-  if [ -n "${AWS_SESSION_TOKEN}" ]; then
-    sed -i -e "/aws_secret_access_key/a aws_session_token=${AWS_SESSION_TOKEN}" ~/.aws/credentials
-  fi
-else
-  echo "INFO: Using attached IAM roles/instance profiles to authenticate with S3 as no AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY have been provided"
-fi
-
-
-
-echo "INFO: Copying SFT-agent configuration file(s) from ${S3_URI} to /app/..."
-aws ${PROFILE_OPTION} s3 cp ${S3_URI}/agent-config.yml agent-config.yml
-aws ${PROFILE_OPTION} s3 cp ${S3_URI}/agent-application-config.yml agent-application-config.yml
-
-app_dir=$(pwd)
-
-echo "INFO: CREATE_TEST_FILES is set to ${CREATE_TEST_FILES}"
-echo "INFO: TEST_DIRECTORY is set to ${TEST_DIRECTORY}"
-if [ -n "${CREATE_TEST_FILES}" ] && [ -n "${TEST_DIRECTORY}" ]; then
-  echo "INFO: Creating test files in ${TEST_DIRECTORY}"
-  cd /data-ingress # mounted volume
-  if [ -d "${TEST_DIRECTORY}" ]
-  then
-      cd "${TEST_DIRECTORY}"
-  else
-      mkdir "${TEST_DIRECTORY}"
-      cd "${TEST_DIRECTORY}"
-  fi
-
-  echo "test 1" >> test1.txt
-  echo "test 2" >> test2.txt
-  fi
-
+echo "downloading agent configurations from ${S3_URI}"
+aws s3 cp "${S3_URI}/agent-config-${TYPE}.yml" "agent-config.yml"
+aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
 
 if [ "${TEST_TREND_MICRO}" = true ] ; then
   echo "pass" >> /mnt/stage_point/pass.txt
   mv /mnt/stage_point/shouldbecleaned.txt /mnt/point/shouldbecleaned.txt || mv /mnt/stage_point/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Could not move eicar file due to test virus remediation action. Test successfull"
 fi
 
-
-echo sleeping
-sleep 1440
-
-
-# Retrieve certificates
 TRUSTSTORE_PASSWORD=$(uuidgen -r)
 KEYSTORE_PASSWORD=$(uuidgen -r)
-
 KEY_STORE_PATH="/opt/data-ingress/keystore.jks"
 TRUST_STORE_PATH="/opt/data-ingress/truststore.jks"
 
-echo "Retrieving acm certs"
+echo "retrieving acm certs"
 acm-cert-retriever \
 --acm-cert-arn "${acm_cert_arn}" \
 --acm-key-passphrase "$KEYSTORE_PASSWORD" \
@@ -132,32 +79,52 @@ acm-cert-retriever \
 cd /usr/local/share/ca-certificates/
 touch data_ingress_sft_ca.pem
 
-TRUSTSTORE_ALIASES="${truststore_aliases}"
-for F in $(echo $TRUSTSTORE_ALIASES | sed "s/,/ /g"); do
+TRUSTSTORE_ALIASES="${TRUSTSTORE_ALIASES}"
+for F in $(echo "$TRUSTSTORE_ALIASES" | sed "s/,/ /g"); do
 (cat "$F.crt"; echo) >> data_ingress_sft_ca.pem;
 done
 
-cd $app_dir
+cd /app
+
 unset HTTP_PROXY
 unset HTTPS_PROXY
 unset NO_PROXY
 
-if [ -n "${RENAME_FILE}" ]; then
-  today=$(date +'%Y/%m/%d')
-  FILENAME=${FILENAME_PREFIX}-$today
+if [ "${TYPE}" = receiver ] ; then
+
+echo "mounting ${STAGE_BUCKET} bucket"
+fusermount -u "${MNT_POINT}"
+
+nohup /opt/s3fs-fuse/bin/s3fs "${STAGE_BUCKET}" "${MNT_POINT}" \
+    -o ecs \
+    -o endpoint="${AWS_DEFAULT_REGION}" \
+    -o url="https://s3-${AWS_DEFAULT_REGION}.amazonaws.com" \
+    -o use_sse=kmsid:"${KMS_KEY_ARN}" \
+    -o nonempty \
+    -o allow_other
+
+echo "files currently in s3:"
+sleep 5
+
+ls "${MNT_POINT}"
+fi
+
+if [ "${TYPE}" = sender ]; then
+  echo "creating file that will be sent to receiver"
+echo "ab,c,de" >> /mnt/send_point/prod217.csv
+fi
+
+if [ "${RENAME}" = yes ] & [ "${TYPE}" = receiver ] ; then
+  today=$(date +'%Y-%m-%d')
+  FILENAME="${FILENAME_PREFIX}-$today.csv"
   sed -i "s/^\(\s*rename_replacement\s*:\s*\).*/\1$FILENAME/" agent-application-config.yml
 fi
 
-if [ -n "${CONFIGURE_SSL}" ]; then
-  # Add SSl config to SFT
-  sed -i "s/^\(\s*keyStorePassword\s*:\s*\).*/\1$KEYSTORE_PASSWORD/" agent-config.yml
-  sed -i "s|^\(\s*keyStorePath\s*:\s*\).*|\1$KEY_STORE_PATH|" agent-config.yml
-  sed -i "s|^\(\s*trustStorePath\s*:\s*\).*|\1$TRUST_STORE_PATH|" agent-config.yml
-  sed -i "s/^\(\s*trustStorePassword\s*:\s*\).*/\1$TRUSTSTORE_PASSWORD/" agent-config.yml
+sed -i "s/^\(\s*keyStorePassword\s*:\s*\).*/\1$KEYSTORE_PASSWORD/" agent-config.yml
+sed -i "s|^\(\s*keyStorePath\s*:\s*\).*|\1$KEY_STORE_PATH|" agent-config.yml
+sed -i "s|^\(\s*trustStorePath\s*:\s*\).*|\1$TRUST_STORE_PATH|" agent-config.yml
+sed -i "s/^\(\s*trustStorePassword\s*:\s*\).*/\1$TRUSTSTORE_PASSWORD/" agent-config.yml
 
-  echo "INFO: Starting the SFT agent with SSL config..."
-  exec java -javaagent:/opt/jmx_exporter/jmx_exporter.jar=9996:/opt/jmx_exporter/jmx_exporter_config.yml -Dsun.net.client.defaultConnectTimeout=600000 -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" -Djavax.net.ssl.keyAlias="${private_key_alias}" -jar -Xmx12g sft-agent.jar server agent-config.yml
-else
-  echo "INFO: Starting the SFT agent..."
-  exec java -javaagent:/opt/jmx_exporter/jmx_exporter.jar=9996:/opt/jmx_exporter/jmx_exporter_config.yml -Dsun.net.client.defaultConnectTimeout=600000 -jar sft-agent.jar server agent-config.yml
-fi
+exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
+-Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
+-Djavax.net.ssl.keyAlias="${PRIVATE_KEY_ALIAS}" -jar -Xmx12g sft-agent.jar server agent-config.yml
