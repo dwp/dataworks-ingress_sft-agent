@@ -5,7 +5,7 @@ set -e
 export HTTP_PROXY="http://${internet_proxy}:3128"
 export HTTPS_PROXY="$HTTP_PROXY"
 export NO_PROXY="${non_proxied_endpoints},${dks_fqdn}"
-
+export AWS_S3_FILE_OVERWRITE=True
 if [ "${TYPE}" = receiver ] ; then
 
   if [ -z "${SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET}" -o -z "${SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX}" ]; then
@@ -112,6 +112,8 @@ fi
 if [ "${TYPE}" = sender ]; then
   echo "creating file that will be sent to receiver"
 echo "ab,c,de" >> /mnt/send_point/prod217.csv
+echo "ab,c,de" >> /mnt/send_point/prod218.csv
+
 fi
 
 if [ "${RENAME}" = yes ] & [ "${TYPE}" = receiver ] ; then
