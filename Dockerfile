@@ -13,7 +13,7 @@ RUN echo "installing dependencies" \
 && apk add --no-cache build-base alpine-sdk automake autoconf fuse-dev curl-dev libxml2-dev fuse libressl-dev \
 && apk add --no-cache g++ gcc musl-dev libffi-dev openssl-dev cargo jq aws-cli \
 && pip3 install --upgrade pip \
-&& pip3 install https://github.com/dwp/acm-pca-cert-generator/releases/download/${acm_cert_helper_version}/acm_cert_helper-${acm_cert_helper_version}.tar.gz \
+&& pip3 install https://github.com/dwp/acm-pca-cert-generator/releases/download/${acm_cert_helper_version}/acm_cert_helper-${acm_cert_helper_version}.tar.gz
 
 RUN git config --global http.sslVerify false
 RUN git clone --depth 1 --branch ${S3FS_VERSION} https://github.com/s3fs-fuse/s3fs-fuse.git
