@@ -115,11 +115,11 @@ fi
 if [ "${TEST_TREND_MICRO_ENV}" = "development" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
   echo "sending email to notify about trend micro test"
   ./send-trend-micro-email.sh
-  touch /mnt/trend_micro_test/pass.txt
-  touch /mnt/trend_micro_test/not_passed.txt
-  echo "pass" >> /mnt/trend_micro_test/pass.txt
-  echo "threat" >> /mnt/trend_micro_test/not_passed.txt
-  mv /mnt/trend_micro_test/not_passed.txt /mnt/point/e2e/eicar_test/not_passed.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Remediation action triggered. Test successfull"
+  echo 'pass' >> /mnt/trend_micro_test/pass.txt
+  echo 'threat' >> /mnt/trend_micro_test/data_ingress_eicar.txt
+  echo 'listing location trend micro eicar'
+  ls  /mnt/trend_micro_test
+  mv /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test/not_passed.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Remediation action triggered. Test successfull"
 else
   echo "skipping trend micro test"
 fi
