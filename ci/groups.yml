@@ -1,12 +1,5 @@
 groups:
-  - name: master
-    jobs:
-      - management-dev
-      - management
-  - name: pull-request
-    jobs:
-      - dataworks-ingress_sft-agent-pr
   - name: mirror
     jobs:
-      - mirror-dwpdigital-dataworks-ingress_sft-agent-dev
-      - mirror-dwpdigital-dataworks-ingress_sft-agent
+      - mirror-dwpdigital-dataworks-sft-ingress-agent-dev
+      - mirror-dwpdigital-dataworks-sft-ingress-agent

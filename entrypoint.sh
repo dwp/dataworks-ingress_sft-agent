@@ -2,12 +2,15 @@
 
 set -e
 
+echo "setting env variables"
+
 export HTTP_PROXY="http://${internet_proxy}:3128"
 export HTTPS_PROXY="$HTTP_PROXY"
 export NO_PROXY="${non_proxied_endpoints},${dks_fqdn}"
-export AWS_S3_FILE_OVERWRITE=True
-if [ "${TYPE}" = receiver ] ; then
+export AWS_S3_FILE_OVERWRITE=False
 
+
+if [ "${TYPE}" = receiver ] ; then
   if [ -z "${SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET}" -o -z "${SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX}" ]; then
     echo "container failed due to missing required env vars SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET, SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX"
     exit 1
@@ -30,11 +33,11 @@ if [ "${TYPE}" = receiver ] ; then
     echo "attaching $ni_tag as the third network interface"
     aws ec2 attach-network-interface --region "${AWS_DEFAULT_REGION}" --instance-id "${EC2_INSTANCE_ID}" --network-interface-id "${NI_ID}" --device-index 3
   fi
-
   S3_URI="s3://${SFT_AGENT_RECEIVER_CONFIG_S3_BUCKET}/${SFT_AGENT_RECEIVER_CONFIG_S3_PREFIX}"
 
+
 elif [ "${TYPE}" = sender ] ; then
-  s=120
+  s=180
   echo "waiting $s seconds to allow receiver agent to start"
   sleep $s
   if [ -z "${SFT_AGENT_SENDER_CONFIG_S3_BUCKET}" -o -z "${SFT_AGENT_SENDER_CONFIG_S3_PREFIX}" ]; then
@@ -43,18 +46,21 @@ elif [ "${TYPE}" = sender ] ; then
   fi
   S3_URI="s3://${SFT_AGENT_SENDER_CONFIG_S3_BUCKET}/${SFT_AGENT_SENDER_CONFIG_S3_PREFIX}"
 
+
 else
   echo "container failed due to TYPE must be either sender or receiver but ${TYPE} was provided"
   exit 1
 fi
 
+
 echo "downloading agent configurations from ${S3_URI}"
 aws s3 cp "${S3_URI}/agent-config-${TYPE}.yml" "agent-config.yml"
-aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
 
-if [ "${TEST_TREND_MICRO}" = true ] ; then
-  echo "pass" >> /mnt/stage_point/pass.txt
-  mv /mnt/stage_point/shouldbecleaned.txt /mnt/point/shouldbecleaned.txt || mv /mnt/stage_point/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Could not move eicar file due to test virus remediation action. Test successfull"
+
+if [ "${TEST_TREND_MICRO_ENV}" = "lower_env" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+  aws s3 cp "${S3_URI}/agent-application-config-receiver-e2e.yml" "agent-application-config.yml"
+else
+  aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
 fi
 
 TRUSTSTORE_PASSWORD=$(uuidgen -r)
@@ -85,16 +91,14 @@ for F in $(echo "$TRUSTSTORE_ALIASES" | sed "s/,/ /g"); do
 done
 
 cd /app
-
 unset HTTP_PROXY
 unset HTTPS_PROXY
 unset NO_PROXY
 
-if [ "${TYPE}" = receiver ] ; then
 
+if [ "${TYPE}" = receiver ] ; then
 echo "mounting ${STAGE_BUCKET} bucket"
 fusermount -u "${MNT_POINT}"
-
 nohup /opt/s3fs-fuse/bin/s3fs "${STAGE_BUCKET}" "${MNT_POINT}" \
     -o ecs \
     -o endpoint="${AWS_DEFAULT_REGION}" \
@@ -102,21 +106,30 @@ nohup /opt/s3fs-fuse/bin/s3fs "${STAGE_BUCKET}" "${MNT_POINT}" \
     -o use_sse=kmsid:"${KMS_KEY_ARN}" \
     -o nonempty \
     -o allow_other
-
 echo "files currently in s3:"
 sleep 5
-
 ls "${MNT_POINT}"
+fi
+
+
+if [ "${TEST_TREND_MICRO_ENV}" = "development" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+  echo "sending email to notify about trend micro test"
+  ./send-trend-micro-email.sh
+  touch /mnt/trend_micro_test/pass.txt
+  touch /mnt/trend_micro_test/not_passed.txt
+  echo "pass" >> /mnt/trend_micro_test/pass.txt
+  echo "threat" >> /mnt/trend_micro_test/not_passed.txt
+  mv /mnt/trend_micro_test/not_passed.txt /mnt/point/e2e/eicar_test/not_passed.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Remediation action triggered. Test successfull"
+else
+  echo "skipping trend micro test"
 fi
 
 if [ "${TYPE}" = sender ]; then
   echo "creating file that will be sent to receiver"
 echo "ab,c,de" >> /mnt/send_point/prod217.csv
-echo "ab,c,de" >> /mnt/send_point/prod218.csv
-
 fi
 
-if [ "${RENAME}" = yes ] & [ "${TYPE}" = receiver ] ; then
+if [ "${TYPE}" = receiver ] ; then
   today=$(date +'%Y-%m-%d')
   FILENAME="${FILENAME_PREFIX}-$today.csv"
   sed -i "s/^\(\s*rename_replacement\s*:\s*\).*/\1$FILENAME/" agent-application-config.yml
@@ -126,6 +139,8 @@ sed -i "s/^\(\s*keyStorePassword\s*:\s*\).*/\1$KEYSTORE_PASSWORD/" agent-config.
 sed -i "s|^\(\s*keyStorePath\s*:\s*\).*|\1$KEY_STORE_PATH|" agent-config.yml
 sed -i "s|^\(\s*trustStorePath\s*:\s*\).*|\1$TRUST_STORE_PATH|" agent-config.yml
 sed -i "s/^\(\s*trustStorePassword\s*:\s*\).*/\1$TRUSTSTORE_PASSWORD/" agent-config.yml
+
+echo "starting sft agent"
 
 exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
 -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \

@@ -25,9 +25,10 @@ RUN cd s3fs-fuse && \
 
 RUN mkdir -p /mnt/point
 RUN mkdir -p /mnt/point/data-ingress
-RUN mkdir -p /mnt/stage_point
+RUN mkdir -p /mnt/trend_micro_test
 RUN mkdir -p /mnt/send_point
 RUN mkdir app
+RUN mkdir app-route-test
 RUN mkdir -p /opt/data-ingress
 RUN mkdir -p /mnt/point/e2e/eicar_test
 
@@ -35,23 +36,27 @@ WORKDIR /app
 
 COPY sft-agent-jre8-2.5.3.jar sft-agent.jar
 COPY entrypoint.sh ./
+COPY send-trend-micro-email.sh ./
 
 ENV USER_NAME=root
 ENV GROUP_NAME=root
 RUN chown -R $USER_NAME.$GROUP_NAME /etc/ssl/
 RUN chown -R $USER_NAME.$GROUP_NAME /usr/local/share/ca-certificates/
 RUN chown -R $USER_NAME.$GROUP_NAME /app
+RUN chown -R $USER_NAME.$GROUP_NAME /app-route-test
 RUN chown -R $USER_NAME.$GROUP_NAME /var
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/data-ingress
-RUN chown -R $USER_NAME.$GROUP_NAME /mnt/stage_point
+RUN chown -R $USER_NAME.$GROUP_NAME /mnt/trend_micro_test
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/send_point
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/e2e/eicar_test/
 RUN chown -R $USER_NAME.$GROUP_NAME /opt/data-ingress
 RUN chmod a+rw /var/log
-RUN chmod -R 777 /mnt
-RUN chmod 777 /mnt/point
-RUN chmod 777 entrypoint.sh
+RUN chmod -R 750 /mnt
+RUN chmod 750 /mnt/point
+RUN chmod 750 entrypoint.sh
+RUN chmod 750 send-trend-micro-email.sh
+
 USER $USER_NAME
 
 EXPOSE 8080

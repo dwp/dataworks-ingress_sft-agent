@@ -1,4 +1,9 @@
-.idea
-**/terraform.tf
-**/terraform.tfvars
-.terraform
+**/.idea/
+**/.terraform/
+
+**/*.tfvars
+**/*.tfstate
+**/*.tfstate*
+
+terraform.tf
+aviator_pipeline.yml
