@@ -50,7 +50,7 @@ RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/data-ingress
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/trend_micro_test
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/send_point
-RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/e2e/eicar_test/
+RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/e2e/eicar_test
 RUN chown -R $USER_NAME.$GROUP_NAME /opt/data-ingress
 RUN chmod a+rw /var/log
 RUN chmod -R 750 /mnt
