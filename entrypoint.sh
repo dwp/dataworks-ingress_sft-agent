@@ -117,8 +117,9 @@ if [ "${TEST_TREND_MICRO_ENV}" = "development" ] & [ "${TEST_TREND_MICRO_ON}" = 
   ./send-trend-micro-email.sh
   echo 'pass' >> /mnt/trend_micro_test/pass.txt
   echo 'threat' >> /mnt/trend_micro_test/data_ingress_eicar.txt
-  chmod +x /mnt/trend_micro_test/pass.txt
-  chmod +x /mnt/trend_micro_test/data_ingress_eicar.txt
+  echo 'change permissions'
+  chmod 777 /mnt/trend_micro_test/pass.txt
+  chmod 777 /mnt/trend_micro_test/data_ingress_eicar.txt
   echo 'listing location trend micro eicar'
   ls  /mnt/trend_micro_test
   mv /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test/not_passed.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Remediation action triggered. Test successfull"
