@@ -113,16 +113,12 @@ fi
 
 
 if [ "${TEST_TREND_MICRO_ENV}" = "development" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+  mkdir -p /mnt/point/e2e/eicar_test
   echo "sending email to notify about trend micro test"
   ./send-trend-micro-email.sh
   echo 'pass' >> /mnt/trend_micro_test/pass.txt
-  echo 'threat' >> /mnt/trend_micro_test/data_ingress_eicar.txt
-  echo 'change permissions'
-  chmod 777 /mnt/trend_micro_test/pass.txt
-  chmod 777 /mnt/trend_micro_test/data_ingress_eicar.txt
-  echo 'listing location trend micro eicar'
-  ls  /mnt/trend_micro_test
-  mv /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test/not_passed.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass_ && echo "Remediation action triggered. Test successfull"
+  echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' >> /mnt/trend_micro_test/data_ingress_eicar.txt
+  mv /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test/data_ingress_eicar.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass.txt
 else
   echo "skipping trend micro test"
 fi
