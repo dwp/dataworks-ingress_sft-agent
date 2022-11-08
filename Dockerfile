@@ -38,12 +38,13 @@ WORKDIR /app
 
 COPY sft-agent-jre8-2.5.3.jar sft-agent.jar
 COPY entrypoint.sh ./
-COPY send-trend-micro-email.sh ./
 
 ENV USER_NAME=root
 ENV GROUP_NAME=root
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/send_point
+RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point
+RUN chown -R $USER_NAME.$GROUP_NAME /mnt/trend_micro_test
 RUN chown -R $USER_NAME.$GROUP_NAME /etc/ssl/
 RUN chown -R $USER_NAME.$GROUP_NAME /usr/local/share/ca-certificates/
 RUN chown -R $USER_NAME.$GROUP_NAME /app
@@ -52,9 +53,12 @@ RUN chown -R $USER_NAME.$GROUP_NAME /var
 RUN chown -R $USER_NAME.$GROUP_NAME /opt/data-ingress
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/e2e/eicar_test/
 RUN chmod a+rw /var/log
+
 RUN chmod -R 0755 /mnt
+RUN chmod -R 0755 /mnt/point
+RUN chmod -R 0755 /mnt/point/e2e/eicar_test/
+RUN chmod -R 0755 /mnt/trend_micro_test
 RUN chmod 0755 entrypoint.sh
-RUN chmod 0755 send-trend-micro-email.sh
 
 USER $USER_NAME
 

@@ -111,16 +111,20 @@ sleep 5
 ls "${MNT_POINT}"
 fi
 
-
-if [ "${TEST_TREND_MICRO_ENV}" = "development" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+if [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
   mkdir -p /mnt/point/e2e/eicar_test
-  echo "sending email to notify about trend micro test"
-  ./send-trend-micro-email.sh
   echo 'pass' >> /mnt/trend_micro_test/pass.txt
+  if [ "${TEST_TREND_MICRO_ENV}" = "development" ]; then
+  echo "creating eicar file to test trend micro identifies it as a test virus"
   echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' >> /mnt/trend_micro_test/data_ingress_eicar.txt
-  mv /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test/data_ingress_eicar.txt || mv /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test/pass.txt
-else
-  echo "skipping trend micro test"
+  sleep 10
+  cat /mnt/trend_micro_test/data_ingress_eicar.txt || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
+  sleep 10
+  cp /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
+  fi
+  if [ "${TEST_TREND_MICRO_ENV}" = "qa" ]; then
+    cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
+    fi
 fi
 
 if [ "${TYPE}" = sender ]; then
@@ -144,3 +148,4 @@ echo "starting sft agent"
 exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
 -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
 -Djavax.net.ssl.keyAlias="${PRIVATE_KEY_ALIAS}" -jar -Xmx12g sft-agent.jar server agent-config.yml
+
