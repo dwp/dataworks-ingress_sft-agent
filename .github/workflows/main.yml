@@ -10,7 +10,7 @@ on:
       - 'ci/**'
 
 env:
-  IMAGE_NAME: dwpdigital/dataworks-ingress_sft-agent
+  IMAGE_NAME: dwpdigital/dataworks-ingress-sft-agent
 
 jobs:
   get-publish-version:

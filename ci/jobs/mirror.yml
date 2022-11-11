@@ -1,44 +1,44 @@
 resources:
-  - name: dwpdigital-dataworks-ingress_sft-agent
+  - name: dwpdigital-dataworks-sft-ingress-agent
     type: registry-image-resource
     source:
-      repository: dwpdigital/dataworks-ingress_sft-agent
+      repository: dwpdigital/dataworks-sft-ingress-agent
     check_every: 5m
 
-  - name: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
+  - name: ecr-dwpdigital-dataworks-sft-ingress-agent-dev
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-ingress_sft-agent"
+      repository: "dataworks-sft-ingress-agent"
 
-  - name: ecr-dwpdigital-dataworks-ingress_sft-agent
+  - name: ecr-dwpdigital-dataworks-sft-ingress-agent
     .: (( inject meta.resources.ecr-resource ))
     source:
-      repository: "dataworks-ingress_sft-agent"
-      aws_role_arn: arn:aws:iam::((dataworks.aws_management_acc)):role/ci
+      repository: "dataworks-sft-ingress-agent"
+      aws_role_arn: arn:aws:iam::((aws_account.management)):role/ci
 
 jobs:
-  - name: mirror-dwpdigital-dataworks-ingress_sft-agent-dev
-    serial_groups: [dataworks-ingress_sft-agent]
+  - name: mirror-dwpdigital-dataworks-sft-ingress-agent-dev
+    serial_groups: [dataworks-sft-ingress-agent]
     plan:
-      - get: dwpdigital-dataworks-ingress_sft-agent
+      - get: dwpdigital-dataworks-sft-ingress-agent
         trigger: true
         params:
           format: oci
         attempts: 3
-      - put: ecr-dwpdigital-dataworks-ingress_sft-agent-dev
+      - put: ecr-dwpdigital-dataworks-sft-ingress-agent-dev
         params:
-          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
+          image: "dwpdigital-dataworks-sft-ingress-agent/image.tar"
         attempts: 3
 
-  - name: mirror-dwpdigital-dataworks-ingress_sft-agent
-    serial_groups: [dataworks-ingress_sft-agent]
+  - name: mirror-dwpdigital-dataworks-sft-ingress-agent
+    serial_groups: [dataworks-sft-ingress-agent]
     plan:
-      - get: dwpdigital-dataworks-ingress_sft-agent
+      - get: dwpdigital-dataworks-sft-ingress-agent
         trigger: true
         params:
           format: oci
         attempts: 3
-      - put: ecr-dwpdigital-dataworks-ingress_sft-agent
+      - put: ecr-dwpdigital-dataworks-sft-ingress-agent
         params:
-          image: "dwpdigital-dataworks-ingress_sft-agent/image.tar"
+          image: "dwpdigital-dataworks-sft-ingress-agent/image.tar"
         attempts: 3
