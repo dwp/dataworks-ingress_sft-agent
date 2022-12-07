@@ -11,7 +11,7 @@ After cloning this repo, please run:
 
 ## s3fs
 
-DataWorks ingress SFT agent mounts the stage bucket as a volume in the container, so that when the file has received to the mount directory in the container it also persists on S3. This is done by using the [s3fs|https://github.com/s3fs-fuse/s3fs-fuse] tool.
+DataWorks ingress SFT agent mounts the stage bucket as a volume in the container, so that when the file has received to the mount directory in the container it also persists on S3. This is done by using the [s3fs](https://github.com/s3fs-fuse/s3fs-fuse) tool.
 
 This requires three run time variables
 ```
