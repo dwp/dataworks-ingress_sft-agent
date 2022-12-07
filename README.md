@@ -1,17 +1,17 @@
-# dataworks-ingress-sft-agent
+# DataWorks ingress SFT agent
+
+Alpine Docker image to receive files using the [SFT Java agent](https://dwpdigital.atlassian.net/wiki/spaces/SFT/pages/113836037260/SFT+Agent+Documentation).
 
 ## DataWorks ingress sft agent Docker image
 
 This repo contains Makefile, and Dockerfile to fit the standard pattern.
-This repo is a base to create new Docker image repos, adding the githooks submodule, making the repo ready for use.
-
 After cloning this repo, please run:  
 `make bootstrap`
 
 
 ## s3fs
 
-DataWorks ingress sft agent image mounts the stage bucket as a volume to the container, so that when the file has received to the mount directory in the container it also persists on S3.
+DataWorks ingress SFT agent mounts the stage bucket as a volume in the container, so that when the file has received to the mount directory in the container it also persists on S3. This is done by using the [s3fs|https://github.com/s3fs-fuse/s3fs-fuse] tool.
 
 This requires three run time variables
 ```
@@ -34,3 +34,9 @@ TEST_TREND_MICRO_ENV == 'development' | 'qa'
 TEST_TREND_MICRO_ON == 'ci'
 TYPE == 'receiver'
 ```
+
+### SFT test
+
+This test runs (only in dev and qa) whenever thera are two container instances available to run SFT sender and receiver. The sender will create a file in the directory that is then sent to the receiver endpoint including instance IP and local directory as defined in the [e2e congif](https://github.com/dwp/dataworks-aws-data-ingress/blob/master/terraform/data-ingress-sft-task/sft_config/agent-application-config-receiver-e2e.tpl) . The test passes if the file is renamed and is present on S3 stage bucket.
+
+
