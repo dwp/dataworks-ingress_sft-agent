@@ -11,7 +11,7 @@ After cloning this repo, please run:
 
 ## s3fs
 
-DataWorks ingress SFT agent mounts the stage bucket as a volume in the container, so that when the file has received to the mount directory in the container it also persists on S3. This is done by using the [s3fs](https://github.com/s3fs-fuse/s3fs-fuse) tool.
+DataWorks ingress SFT agent mounts the stage bucket as a volume in the container, so that when the file has been received to the mount directory in the container it also persists on S3. This is done by using the [s3fs](https://github.com/s3fs-fuse/s3fs-fuse) tool.
 
 This requires three run time variables
 ```
@@ -37,6 +37,4 @@ TYPE == 'receiver'
 
 ### SFT test
 
-This test runs (only in dev and qa) whenever thera are two container instances available to run SFT sender and receiver. The sender will create a file in the directory that is then sent to the receiver endpoint including instance IP and local directory as defined in the [e2e congif](https://github.com/dwp/dataworks-aws-data-ingress/blob/master/terraform/data-ingress-sft-task/sft_config/agent-application-config-receiver-e2e.tpl) . The test passes if the file is renamed and is present on S3 stage bucket.
-
-
+The sender will create a file in the directory that is then sent to the receiver endpoint that renames and puts it on S3. Example configuration for the receiver including instance IP and local directory are defined in the [e2e congif](https://github.com/dwp/dataworks-aws-data-ingress/blob/master/terraform/data-ingress-sft-task/sft_config/agent-application-config-receiver-e2e.tpl).
