@@ -1,4 +1,4 @@
-# dataworks-ingress_sft-agent
+# dataworks-ingress-sft-agent
 
 ## DataWorks ingress sft agent Docker image
 
@@ -11,17 +11,26 @@ After cloning this repo, please run:
 
 ## s3fs
 
-DataWorks ingress sft agent image mounts the stage bucket as a volume to the container.
+DataWorks ingress sft agent image mounts the stage bucket as a volume to the container, so that when the file has received to the mount directory in the container it also persists on S3.
+
 This requires three run time variables
 ```
-STAGE_BUCKET: bucket id
-MNT_POINT: a directory where the bucket will be mounted
-KMS_KEY_ARN: the encryption key of the bucket
+STAGE_BUCKET: bucket id where file will be stored
+MNT_POINT: container directory where the bucket will be mounted
+KMS_KEY_ARN: the encryption key of the stage bucket to write files
 
 ```
 
 ## Tests
 
+The tests for this image are embedded in the [@data-ingress](https://github.com/dwp/dataworks-behavioural-framework/blob/master/src/features/data-ingress.feature) feature in dataworks-behavioural-framework.
+
 ### Trend micro test
 
-When ```CREATE_TEST_FILES``` variable is set to true, a test virus file is created to verify that the agent is active.
+When the following conditions are true, the Trend Micro test runs and an Eicar test file is created, detected and removed.
+
+```
+TEST_TREND_MICRO_ENV == 'development' | 'qa'
+TEST_TREND_MICRO_ON == 'ci'
+TYPE == 'receiver'
+```
