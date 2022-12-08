@@ -30,7 +30,7 @@ The tests for this image are embedded in the [@data-ingress](https://github.com/
 When the following conditions are true, the Trend Micro test runs and an Eicar test file is created, detected and removed.
 
 ```
-ENVIRONMENT == 'development' | 'qa'
+ENVIRONMENT == 'development'
 TESTING_ON == 'ci'
 TYPE == 'receiver'
 ```
