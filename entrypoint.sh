@@ -2,12 +2,12 @@
 
 set -e
 
-echo "setting env variables"
+echo "setting environment variables"
 
 export HTTP_PROXY="http://${internet_proxy}:3128"
 export HTTPS_PROXY="$HTTP_PROXY"
 export NO_PROXY="${non_proxied_endpoints},${dks_fqdn}"
-export AWS_S3_FILE_OVERWRITE=False
+export AWS_S3_FILE_OVERWRITE=False # allows for multiple files having the same name to exist by appending a unique string at the end of any duplicate object name
 
 
 if [ "${TYPE}" = receiver ] ; then
@@ -46,20 +46,21 @@ elif [ "${TYPE}" = sender ] ; then
   fi
   S3_URI="s3://${SFT_AGENT_SENDER_CONFIG_S3_BUCKET}/${SFT_AGENT_SENDER_CONFIG_S3_PREFIX}"
 
-
 else
   echo "container failed due to TYPE must be either sender or receiver but ${TYPE} was provided"
   exit 1
 fi
 
-
 echo "downloading agent configurations from ${S3_URI}"
 aws s3 cp "${S3_URI}/agent-config-${TYPE}.yml" "agent-config.yml"
 
 
-if [ "${TEST_TREND_MICRO_ENV}" = "lower_env" ] & [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+
+if [ "${ENVIRONMENT}" = "development" ] | [ "${ENVIRONMENT}" = "qa" ] & [ "${TESTING_ON}" = "ci" ] & [ "${TYPE}" = receiver ]; then
+  echo "downloading e2e sft config"
   aws s3 cp "${S3_URI}/agent-application-config-receiver-e2e.yml" "agent-application-config.yml"
 else
+  echo "downloading sft config"
   aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
 fi
 
@@ -111,10 +112,10 @@ sleep 5
 ls "${MNT_POINT}"
 fi
 
-if [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+if [ "${TESTING_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
   mkdir -p /mnt/point/e2e/eicar_test
   echo 'pass' >> /mnt/trend_micro_test/pass.txt
-  if [ "${TEST_TREND_MICRO_ENV}" = "development" ]; then
+  if [ "${ENVIRONMENT}" = "development" ]; then
   echo "creating eicar file to test trend micro identifies it as a test virus"
   echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' >> /mnt/trend_micro_test/data_ingress_eicar.txt
   sleep 10
@@ -122,9 +123,10 @@ if [ "${TEST_TREND_MICRO_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
   sleep 10
   cp /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
   fi
-  if [ "${TEST_TREND_MICRO_ENV}" = "qa" ]; then
+  if [ "${ENVIRONMENT}" = "qa" ]; then
+    echo "skipping trend micro test"
     cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
-    fi
+  fi
 fi
 
 if [ "${TYPE}" = sender ]; then
@@ -148,4 +150,3 @@ echo "starting sft agent"
 exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
 -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
 -Djavax.net.ssl.keyAlias="${PRIVATE_KEY_ALIAS}" -jar -Xmx12g sft-agent.jar server agent-config.yml
-
