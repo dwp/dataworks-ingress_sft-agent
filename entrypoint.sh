@@ -56,7 +56,7 @@ aws s3 cp "${S3_URI}/agent-config-${TYPE}.yml" "agent-config.yml"
 
 
 
-if [ [ "${ENVIRONMENT}" = "development" ] | [ "${ENVIRONMENT}" = "qa" ] ]  & [ "${TESTING_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
+if [ "${ENVIRONMENT}" = "development" ] | [ "${ENVIRONMENT}" = "qa" ] & [ "${TESTING_ON}" = "ci" ] & [ "${TYPE}" = receiver ]; then
   echo "downloading e2e sft config"
   aws s3 cp "${S3_URI}/agent-application-config-receiver-e2e.yml" "agent-application-config.yml"
 else
