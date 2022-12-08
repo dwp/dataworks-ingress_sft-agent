@@ -150,4 +150,3 @@ echo "starting sft agent"
 exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
 -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
 -Djavax.net.ssl.keyAlias="${PRIVATE_KEY_ALIAS}" -jar -Xmx12g sft-agent.jar server agent-config.yml
-
