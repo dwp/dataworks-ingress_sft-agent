@@ -54,15 +54,8 @@ fi
 echo "downloading agent configurations from ${S3_URI}"
 aws s3 cp "${S3_URI}/agent-config-${TYPE}.yml" "agent-config.yml"
 
-
-
-if [ "${ENVIRONMENT}" = "development" ] | [ "${ENVIRONMENT}" = "qa" ] & [ "${TESTING_ON}" = "ci" ] & [ "${TYPE}" = receiver ]; then
-  echo "downloading e2e sft config"
-  aws s3 cp "${S3_URI}/agent-application-config-receiver-e2e.yml" "agent-application-config.yml"
-else
-  echo "downloading sft config"
-  aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
-fi
+echo "downloading sft config"
+aws s3 cp "${S3_URI}/agent-application-config-${TYPE}.yml" "agent-application-config.yml"
 
 TRUSTSTORE_PASSWORD=$(uuidgen -r)
 KEYSTORE_PASSWORD=$(uuidgen -r)
