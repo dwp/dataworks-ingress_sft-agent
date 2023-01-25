@@ -31,7 +31,6 @@ RUN mkdir -p /mnt/trend_micro_test
 RUN mkdir -p /mnt/send_point
 RUN mkdir -p app
 RUN mkdir -p app-route-test
-RUN mkdir -p internal/AWSDataworx1/inbound/GFTS/CH
 RUN mkdir -p /opt/data-ingress
 RUN mkdir -p /mnt/point/e2e/eicar_test
 
@@ -53,7 +52,6 @@ RUN chown -R $USER_NAME.$GROUP_NAME /app-route-test
 RUN chown -R $USER_NAME.$GROUP_NAME /var
 RUN chown -R $USER_NAME.$GROUP_NAME /opt/data-ingress
 RUN chown -R $USER_NAME.$GROUP_NAME /mnt/point/e2e/eicar_test/
-RUN chown -R $USER_NAME.$GROUP_NAME internal/AWSDataworx1/inbound/GFTS/CH
 RUN chmod a+rw /var/log
 
 RUN chmod -R 0755 /mnt
