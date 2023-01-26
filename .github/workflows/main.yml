@@ -7,10 +7,6 @@ on:
     paths-ignore:
       - 'docs/**'
       - '*.md'
-      - 'ci/**'
-
-env:
-  IMAGE_NAME: dwpdigital/dataworks-ingress-sft-agent
 
 jobs:
   get-publish-version:
@@ -21,16 +17,19 @@ jobs:
       - name: Prepare SemVer
         id: prepare-semver
         run: |
+          set +o pipefail
           LATEST_VERSION=$(curl --silent "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          set -o pipefail
           [  -z "$LATEST_VERSION" ] && LATEST_VERSION="0.0.0"
-          echo ::set-output name=latest_version_out::$LATEST_VERSION
-          commit_message="${{ github.event.head_commit.message }}"
+          echo "latest_version_out=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(echo $LATEST_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          commit_message=$( echo "${{ github.event.head_commit.message }}" | sed 's/"//g')
           if [[ "${commit_message,,}" == *"major release"* ]]; then
-            echo ::set-output name=semver_increment::"m"
+            echo "semver_increment='m'" >> $GITHUB_OUTPUT
           elif [[ "${commit_message,,}" == *"minor release"* ]]; then
-            echo ::set-output name=semver_increment::"i"
+            echo "semver_increment='i'" >> $GITHUB_OUTPUT
           else
-            echo ::set-output name=semver_increment::"p"
+            echo "semver_increment='p'" >> $GITHUB_OUTPUT
           fi
       - name: Increment SemVer
         id: semver
@@ -38,54 +37,70 @@ jobs:
         with:
           semver-input: ${{ steps.prepare-semver.outputs.latest_version_out }}
           increment: ${{ steps.prepare-semver.outputs.semver_increment }}
+
       - name: Get publish version
         id: get-publish-version
-        run: echo "::set-output name=publish-version::${{ steps.semver.outputs.semver }}"
+        run: |
+          echo "publish-version=${{ steps.semver.outputs.semver }}" >> $GITHUB_OUTPUT
 
-  publish-github-release:
+
+  build-and-publish-docker-github-release:
     runs-on: ubuntu-latest
-    needs: [get-publish-version, publish-docker]
+    needs: [get-publish-version]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@master
-      - name: Create GitHub Release
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: dwpdigital/dataworks-ingress-sft-agent
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: dwpdigital/dataworks-ingress-sft-agent:${{ needs.get-publish-version.outputs.publish-version }},dwpdigital/dataworks-ingress-sft-agent:latest
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create version file
+        run: |
+          set -u
+          set +o pipefail
+          LATEST_VERSION=$(curl --silent "https://api.github.com/repos/${{ github.repository }}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          set -o pipefail
+          [  -z "$LATEST_VERSION" ] && LATEST_VERSION="0.0.0"
+          VERSION=$(echo $LATEST_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          VERSION_NUMBER=$(echo $VERSION | sed 's/^v\(.*\)$/\1/')
+          mkdir artifacts
+          cd artifacts
+          echo ${VERSION} > VERSION
+
+      - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.get-publish-version.outputs.publish-version }}
-          release_name: Release ${{ needs.get-publish-version.outputs.publish-version }}
+          release_name: ${{ needs.get-publish-version.outputs.publish-version }}
           draft: false
           prerelease: false
 
-  publish-docker:
-    runs-on: ubuntu-latest
-    needs: get-publish-version
-    steps:
-      - uses: actions/checkout@master
-      - name: Get release version
-        id: get_version
-        run: echo RELEASE_VERSION=$(echo ${GITHUB_REF:10}) >> $GITHUB_ENV
-      - name: Publish to DockerHub
-        uses: elgohr/Publish-Docker-Github-Action@191af57e15535d28b83589e3b5f0c31e76aa8733 #v3.0.4 hardcoded for security DW-5986, review regularly
-        with:
-          name: ${{ env.IMAGE_NAME }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          tags: "latest, ${{ needs.get-publish-version.outputs.publish-version }}"
-          tag_semver: true
-
-  snyk-monitor:
-    runs-on: ubuntu-latest
-    needs: publish-docker
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run Snyk monitoring
-        uses: snyk/actions/docker@master
+      - name: upload VERSION file
+        uses: actions/upload-release-asset@v1
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          command: monitor
-          image: ${{ env.IMAGE_NAME }}
-          args: --file=Dockerfile --policy-path=./.snyk --org=dwp-dataworks
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/VERSION
+          asset_name: VERSION
+          asset_content_type: text/plain
