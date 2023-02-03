@@ -125,6 +125,7 @@ fi
 if [ "${TYPE}" = sender ]; then
   echo "creating file that will be sent to receiver"
   echo "ab,c,de" >> /mnt/send_point/prod217.csv
+  zip /mnt/send_point/prod217.zip /mnt/send_point/prod217.csv
 fi
 
 if [ "${TYPE}" = receiver ] ; then
