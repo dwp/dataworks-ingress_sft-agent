@@ -130,7 +130,7 @@ fi
 
 if [ "${TYPE}" = receiver ] ; then
   today=$(date +'%Y-%m-%d')
-  FILENAME="${FILENAME_PREFIX}-$today.csv"
+  FILENAME="${FILENAME_PREFIX}-$today.zip"
   sed -i "s/^\(\s*rename_replacement\s*:\s*\).*/\1$FILENAME/" agent-application-config.yml
 fi
 
