@@ -11,6 +11,7 @@ RUN echo "installing dependencies" \
 && apk add --no-cache sudo \
 && apk add --no-cache openjdk8-jre \
 && apk add --no-cache git \
+&& apk add --no-cache zip \
 && apk add --no-cache build-base alpine-sdk automake autoconf fuse-dev curl-dev libxml2-dev fuse libressl-dev \
 && apk add --no-cache g++ gcc musl-dev libffi-dev openssl-dev cargo jq aws-cli \
 && pip3 install --upgrade pip \
