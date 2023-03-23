@@ -141,6 +141,7 @@ sed -i "s/^\(\s*trustStorePassword\s*:\s*\).*/\1$TRUSTSTORE_PASSWORD/" agent-con
 
 echo "starting sft agent"
 
-exec java -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" -Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
+exec java -Djavax.net.debug=all -Djavax.net.ssl.keyStore="$KEY_STORE_PATH" \
+-Djavax.net.ssl.keyStorePassword="${KEYSTORE_PASSWORD}" \
 -Djavax.net.ssl.trustStore="$TRUST_STORE_PATH" -Djavax.net.ssl.trustStorePassword="${TRUSTSTORE_PASSWORD}" \
 -Djavax.net.ssl.keyAlias="${PRIVATE_KEY_ALIAS}" -jar -Xmx12g sft-agent.jar server agent-config.yml
