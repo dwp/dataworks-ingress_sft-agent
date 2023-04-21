@@ -9,7 +9,7 @@ RUN echo "installing dependencies" \
 && apk add --no-cache util-linux \
 && apk add --no-cache curl \
 && apk add --no-cache sudo \
-&& apk add --no-cache openjdk8-jre \
+&& apk add --no-cache openjdk11-jre \
 && apk add --no-cache git \
 && apk add --no-cache zip \
 && apk add --no-cache build-base alpine-sdk automake autoconf fuse-dev curl-dev libxml2-dev fuse libressl-dev \
@@ -37,7 +37,7 @@ RUN mkdir -p /mnt/point/e2e/eicar_test
 
 WORKDIR /app
 
-COPY sft-agent-jre8-2.5.3.jar sft-agent.jar
+COPY sft-agent-3.0.6.jar sft-agent.jar
 COPY entrypoint.sh ./
 
 ENV USER_NAME=root
