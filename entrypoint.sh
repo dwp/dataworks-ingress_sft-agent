@@ -109,23 +109,17 @@ if [ "${TESTING_ON}" = "ci" ]  & [ "${TYPE}" = receiver ]; then
   mkdir -p /mnt/point/e2e/eicar_test
   echo 'pass' >> /mnt/trend_micro_test/pass.txt
   if [ "${ENVIRONMENT}" = "development" ]; then
-  echo "creating eicar file to test trend micro identifies it as a test virus"
-  echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' >> /mnt/trend_micro_test/data_ingress_eicar.txt
-  sleep 10
-  cat /mnt/trend_micro_test/data_ingress_eicar.txt || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
-  sleep 10
-  cp /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
+    echo "creating eicar file to test trend micro identifies it as a test virus"
+    echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' >> /mnt/trend_micro_test/data_ingress_eicar.txt
+    sleep 10
+    cat /mnt/trend_micro_test/data_ingress_eicar.txt || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
+    sleep 10
+    cp /mnt/trend_micro_test/data_ingress_eicar.txt /mnt/point/e2e/eicar_test || cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
   fi
   if [ "${ENVIRONMENT}" = "qa" ]; then
     echo "skipping trend micro test"
     cp /mnt/trend_micro_test/pass.txt /mnt/point/e2e/eicar_test
   fi
-fi
-
-if [ "${TYPE}" = receiver ] ; then
-  today=$(date +'%Y-%m-%d')
-  FILENAME="${FILENAME_PREFIX}-$today.zip"
-  sed -i "s/^\(\s*rename_replacement\s*:\s*\).*/\1$FILENAME/" agent-application-config.yml
 fi
 
 sed -i "s/^\(\s*keyStorePassword\s*:\s*\).*/\1$KEYSTORE_PASSWORD/" agent-config.yml
